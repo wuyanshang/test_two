@@ -1,0 +1,259 @@
+{
+  "test_cases": [
+    {
+      "id": "TC001",
+      "name": "用户bug1-中文清晰+英文严重矛盾",
+      "category": "关键bug修复",
+      "input": {
+        "table_cn": "客户信息表",
+        "table_en": "t_customer",
+        "field_cn": "投保人姓名",
+        "field_en": "sex",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000001"],
+        "reason": "中文名指向姓名，英文名指向性别，严重矛盾"
+      }
+    },
+    {
+      "id": "TC002",
+      "name": "用户bug2-技术性修饰语",
+      "category": "关键bug修复",
+      "input": {
+        "table_cn": "交易流水表",
+        "table_en": "t_transaction",
+        "field_cn": "金额字段1",
+        "field_en": "amount",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000002"],
+        "reason": "'字段1'是技术编号，非业务限定"
+      }
+    },
+    {
+      "id": "TC003",
+      "name": "正常-中文清晰+英文缺失",
+      "category": "基础场景",
+      "input": {
+        "table_cn": "保单信息表",
+        "table_en": "t_policy_info",
+        "field_cn": "保单号",
+        "field_en": "",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "中文名清晰，英文名缺失不影响"
+      }
+    },
+    {
+      "id": "TC004",
+      "name": "正常-中文清晰+英文缩写",
+      "category": "基础场景",
+      "input": {
+        "table_cn": "保单信息表",
+        "table_en": "t_policy_info",
+        "field_cn": "保单号",
+        "field_en": "POLNO",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "中文名清晰，英文名是缩写不矛盾"
+      }
+    },
+    {
+      "id": "TC005",
+      "name": "正常-中文清晰+英文一致",
+      "category": "基础场景",
+      "input": {
+        "table_cn": "保单信息表",
+        "table_en": "t_policy_info",
+        "field_cn": "保单号",
+        "field_en": "policyNumber",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "中英文名一致，无歧义"
+      }
+    },
+    {
+      "id": "TC006",
+      "name": "正常-技术字段（标志）",
+      "category": "基础场景",
+      "input": {
+        "table_cn": "交易流水表",
+        "table_en": "t_transaction",
+        "field_cn": "业务标志",
+        "field_en": "BIZ_FLAG",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "核心词'标志'，技术字段自动通过"
+      }
+    },
+    {
+      "id": "TC007",
+      "name": "歧义-高风险词+通用表",
+      "category": "B000002场景",
+      "input": {
+        "table_cn": "通用数据表",
+        "table_en": "t_common_data",
+        "field_cn": "金额",
+        "field_en": "amount",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000002"],
+        "reason": "'金额'命中高风险词表，通用表无法限定"
+      }
+    },
+    {
+      "id": "TC008",
+      "name": "正常-高风险词+业务表",
+      "category": "B000002边界",
+      "input": {
+        "table_cn": "理赔案件表",
+        "table_en": "t_clm_case",
+        "field_cn": "金额",
+        "field_en": "amount",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "表名'理赔案件'限定了业务场景，可推断为理赔金额"
+      }
+    },
+    {
+      "id": "TC009",
+      "name": "正常-高风险词+业务限定修饰语",
+      "category": "B000002边界",
+      "input": {
+        "table_cn": "通用数据表",
+        "table_en": "t_common_data",
+        "field_cn": "保费金额",
+        "field_en": "amount",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "'保费'是业务限定修饰语，含义明确"
+      }
+    },
+    {
+      "id": "TC010",
+      "name": "歧义-通用词修饰语",
+      "category": "B000002场景",
+      "input": {
+        "table_cn": "通用数据表",
+        "table_en": "t_common_data",
+        "field_cn": "金额信息",
+        "field_en": "amount",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000002"],
+        "reason": "'信息'是通用词，非业务限定"
+      }
+    },
+    {
+      "id": "TC011",
+      "name": "正常-中英文名互补",
+      "category": "D2场景",
+      "input": {
+        "table_cn": "客户信息表",
+        "table_en": "t_customer",
+        "field_cn": "被保人",
+        "field_en": "INSNAM",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": false,
+        "rules": [],
+        "reason": "中文名'被保人'约束INSNAM为Insured Name"
+      }
+    },
+    {
+      "id": "TC012",
+      "name": "歧义-中文不清晰+英文矛盾",
+      "category": "B000001场景",
+      "input": {
+        "table_cn": "产品信息表",
+        "table_en": "t_product",
+        "field_cn": "公司别",
+        "field_en": "planName",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000001"],
+        "reason": "中文名'公司别'不够精确，英文名指向险种名称"
+      }
+    },
+    {
+      "id": "TC013",
+      "name": "歧义-多规则触发",
+      "category": "复杂场景",
+      "input": {
+        "table_cn": "通用数据表",
+        "table_en": "t_common_data",
+        "field_cn": "状态",
+        "field_en": "remark",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000001", "B000002"],
+        "reason": "中英文名矛盾 + 缺少业务限定"
+      }
+    },
+    {
+      "id": "TC014",
+      "name": "边界-保单号vs金额",
+      "category": "严重矛盾测试",
+      "input": {
+        "table_cn": "保单信息表",
+        "table_en": "t_policy_info",
+        "field_cn": "保单号",
+        "field_en": "amount",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000001"],
+        "reason": "保单号（业务实体）vs 金额（金额类），跨类别矛盾"
+      }
+    },
+    {
+      "id": "TC015",
+      "name": "边界-姓名vs年龄",
+      "category": "严重矛盾测试",
+      "input": {
+        "table_cn": "客户信息表",
+        "table_en": "t_customer",
+        "field_cn": "被保人姓名",
+        "field_en": "age",
+        "abbreviation_mappings": ""
+      },
+      "expected": {
+        "has_ambiguity": true,
+        "rules": ["B000001"],
+        "reason": "姓名（人员标识类）vs 年龄（人员属性类），跨类别矛盾"
+      }
+    }
+  ]
+}

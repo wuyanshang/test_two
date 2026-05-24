@@ -1,0 +1,16 @@
+系统英文名,系统中文名,表英文名,表中文名,字段英文名,字段中文名
+CRM,客户关系管理系统,t_customer,客户信息表,sex,投保人姓名
+POLICY,保单系统,t_transaction,交易流水表,amount,金额字段1
+POLICY,保单系统,t_policy_info,保单信息表,POLNO,保单号
+POLICY,保单系统,t_policy_info,保单信息表,policyNumber,保单号
+CLAIM,理赔系统,t_transaction,交易流水表,BIZ_FLAG,业务标志
+CLAIM,理赔系统,t_common_data,通用数据表,amount,金额
+CLAIM,理赔系统,t_clm_case,理赔案件表,amount,金额
+CLAIM,理赔系统,t_common_data,通用数据表,premium_amount,保费金额
+CUSTOMER,客户系统,t_customer,客户信息表,INSNAM,被保人
+PRODUCT,产品系统,t_product,产品信息表,planName,公司别
+CLAIM,理赔系统,t_common_data,通用数据表,remark,状态
+POLICY,保单系统,t_policy_info,保单信息表,amount,保单号
+CUSTOMER,客户系统,t_customer,客户信息表,age,被保人姓名
+CLAIM,理赔系统,t_common_data,通用数据表,amount,金额信息
+CLAIM,理赔系统,t_pre_investigation,索赔前调查表,reviewer,复审人员
