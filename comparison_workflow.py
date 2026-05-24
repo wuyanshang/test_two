@@ -94,15 +94,19 @@ def load_prompts(state: TestState) -> TestState:
     print("📄 加载提示词...")
 
     try:
+        # 获取脚本所在目录
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        prompts_dir = os.path.join(script_dir, "prompts")
+
         # 加载原始提示词
-        with open("semantic-ambiguity.txt", "r", encoding="utf-8") as f:
+        with open(os.path.join(prompts_dir, "semantic-ambiguity.txt"), "r", encoding="utf-8") as f:
             state["original_prompt"] = f.read()
 
         # 加载修复版提示词
-        with open("stage1-fixed.txt", "r", encoding="utf-8") as f:
+        with open(os.path.join(prompts_dir, "stage1-fixed.txt"), "r", encoding="utf-8") as f:
             state["stage1_prompt"] = f.read()
 
-        with open("stage2-fixed.txt", "r", encoding="utf-8") as f:
+        with open(os.path.join(prompts_dir, "stage2-fixed.txt"), "r", encoding="utf-8") as f:
             state["stage2_prompt"] = f.read()
 
         print("✅ 提示词加载完成")

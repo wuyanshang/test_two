@@ -6,12 +6,22 @@
 
 ```
 comparison-test/
-├── comparison_workflow.py      # LangGraph 工作流脚本
-├── README_workflow.md          # 详细使用说明
-├── test_data_sample.csv        # 示例测试数据（15条）
-├── test-cases.json            # 标准测试用例集（15个）
-├── test-guide.md              # 测试指南
-└── test-comparison-table.md   # 对比记录表格模板
+├── README.md                      # 项目主说明文档
+├── README_workflow.md             # 详细使用说明
+├── comparison_workflow.py         # LangGraph 工作流脚本
+├── requirements.txt               # Python 依赖
+├── .gitignore                     # Git 忽略规则
+├── prompts/                       # 提示词文件夹
+│   ├── README.md                  # 提示词说明文档
+│   ├── semantic-ambiguity.txt     # 原始版本提示词
+│   ├── stage1-fixed.txt           # 修复版阶段一
+│   ├── stage2-fixed.txt           # 修复版阶段二
+│   ├── stage1-kimi.txt            # Kimi优化版阶段一
+│   └── stage2-kimi.txt            # Kimi优化版阶段二
+├── test-cases.json                # 标准测试用例集（15个）
+├── test-guide.md                  # 测试指南
+├── test-comparison-table.md       # 对比记录表格模板
+└── test_data_sample.csv           # 示例测试数据（15条）
 ```
 
 ## 🎯 功能特性
