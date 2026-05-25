@@ -61,23 +61,25 @@
 **D1 详细判断逻辑：**
 
 步骤1：检查 field_cn 是否清晰
+
+前置检查：如果 field_cn 是单独的高风险词（姓名/状态/日期/金额/关系/编号/利率）且无业务限定，D1 失败。
+示例：field_cn="金额" → D1 失败；field_cn="保费金额" → 继续判断
+
+常规判断：
 - 判断标准：是可理解的中文业务描述，且指代对象明确
 - 业务限定修饰语：必须是业务实体（被保人、投保人、保单等）或业务场景（投保、理赔等）
 - 排除技术性词汇：不能仅有"字段"、"信息"、"数据"等通用词，或仅有序号"1"、"2"等
-- 示例：
-  - `保单号` → 清晰 ✅
-  - `投保人姓名` → 清晰 ✅
-  - `金额字段1` → 不清晰 ❌（"字段1"是技术编号，非业务限定）
-  - `金额信息` → 不清晰 ❌（"信息"是通用词，非业务限定）
 
 步骤2：如果 field_cn 清晰，检查 field_en 是否矛盾
-- 如果 field_en 为空 → 无矛盾，D1 通过 ✅
-- 如果 field_en 是缩写组合（如 CLMLSID, INSNAM）→ 无法判断矛盾，D1 通过 ✅
-- 如果 field_en 是可读英文（如 sex, amount, name）→ 检查是否严重矛盾：
-  - 轻微不一致（都指向同一业务概念）→ D1 通过 ✅
-    示例：field_cn=`保单号`, field_en=`policyNumber` vs `POLNO`
-  - 严重矛盾（指向完全不同的业务概念）→ D1 失败 ❌
-    示例：field_cn=`投保人姓名`, field_en=`sex`（性别）
+
+通用词白名单：startDate/endDate/date/amount/status/id 等通用词与同类别的特定中文名不构成严重矛盾。
+示例：field_cn="就诊日期", field_en="startDate" → 同类别，不矛盾
+
+矛盾检查：
+- field_en 为空或缩写组合 → 无矛盾，D1 通过 ✅
+- field_en 是通用词且与 field_cn 同类别 → 不矛盾，D1 通过 ✅
+- field_en 可读且与 field_cn 同类别 → 轻微不一致，D1 通过 ✅
+- field_en 可读且与 field_cn 跨类别 → 严重矛盾，D1 失败 ❌
 
 **D1 技术字段自动通过：**
 - field_cn 核心词为"标志"或"标志位"（不论修饰语）：`业务标志`、`处理标志` → D1通过
@@ -102,7 +104,7 @@
 输入：field_cn=投保人姓名, field_en=sex
 输出：{"disambiguation_success": false, "path_used": "D1失败-严重矛盾", "reasoning": "中文名指向姓名，英文名指向性别，无法确定实际存储内容", "field_meaning": null}
 
-示例3 - D1失败（无业务限定）：
-输入：field_cn=金额字段1, field_en=amount
-输出：{"disambiguation_success": false, "path_used": "D1失败-无业务限定", "reasoning": "'字段1'是技术编号非业务限定，指代对象不明确", "field_meaning": null}
+示例3 - D1失败（高风险词）：
+输入：field_cn=金额, field_en=amount
+输出：{"disambiguation_success": false, "path_used": "D1失败-高风险词", "reasoning": "'金额'是高风险词且无业务限定，指代对象不明确", "field_meaning": null}
 </examples>
