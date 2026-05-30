@@ -1,0 +1,15 @@
+{
+  "name": "field-quality-workflow",
+  "version": "1.0.0",
+  "description": "字段质检系统 - Workflow 方案",
+  "main": "example-usage.js",
+  "scripts": {
+    "test": "node example-usage.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.6.0",
+    "xlsx": "^0.18.5"
+  },
+  "author": "",
+  "license": "MIT"
+}
