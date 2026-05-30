@@ -1,6 +1,6 @@
 ---
 name: insurance-field-translator
-description: 将保险/寿险行业的中文字段名翻译成符合ACORD和中国保险行业标准的英文字段名。当用户需要翻译保险字段名称、处理保险数据字典、或者有大量保险相关的中文字段需要标准化英文命名时使用此skill。特别适合处理成百上千条字段的批量翻译任务。
+description: 将保险/寿险行业的中文字段名翻译成符合ACORD和中国保险行业标准的英文字段名。当用户需要翻译保险字段名称、处理保险数据字典、或者有大量保险相关的中文字段需要标准化英文命名时使用此skill。特别适合处理成百上千条字段的批量翻译任务。支持Excel文件输入输出，自动分批并行处理大量数据。
 ---
 
 # 保险字段翻译器
@@ -19,7 +19,7 @@ description: 将保险/寿险行业的中文字段名翻译成符合ACORD和中�
 
 1. **提取数据**：使用Python脚本从输入Excel文件中读取数据
 2. **分批处理**：将数据分成批次（默认每批100条）
-3. **并行翻译**：使用Workflow工具派遣多个子agent并行翻译各批次
+3. **并行翻译**：使用Agent工具派遣多个子agent并行翻译各批次
 4. **汇总结果**：收集所有子agent的翻译结果
 5. **写入输出**：将中英文字段名写入新的Excel文件
 
@@ -40,134 +40,170 @@ description: 将保险/寿险行业的中文字段名翻译成符合ACORD和中�
 python scripts/extract_fields.py <输入excel路径> <列名> <输出json路径>
 ```
 
+建议将输出json保存到临时目录，例如：`/tmp/insurance_fields_<timestamp>.json`
+
 此脚本会：
 - 读取指定列的所有字段名
-- 输出JSON文件，包含字段名和行索引
+- 输出JSON文件，格式为：`[{"index": 0, "chinese": "字段名"}, ...]`
 - 优雅处理错误（文件不存在、列名无效等）
 
-### 第3步：批量翻译
+### 第3步：批量翻译（使用Agent工具）
 
 读取提取的JSON文件，获取中文字段名列表。计算需要的批次数量（批次大小：100条）。
 
-**重要：使用Workflow工具来编排翻译任务**。创建workflow脚本如下：
+**重要：使用Agent工具派遣多个子agent并行翻译**。
 
-```javascript
-export const meta = {
-  name: 'translate-insurance-fields',
-  description: '并行批量翻译保险字段名称',
-  phases: [
-    { title: '翻译', detail: '并行翻译各批次字段名' }
-  ]
-}
+#### 3.1 准备批次数据
 
-phase('翻译')
+将字段列表分成批次，每批100条：
 
-// args 应该是: { fields: [{index: 0, chinese: "字段名"},...], batchSize: 100 }
-const { fields, batchSize } = args
+```python
+import json
+import math
 
-// 分批
-const batches = []
-for (let i = 0; i < fields.length; i += batchSize) {
-  batches.push({
-    batchId: Math.floor(i / batchSize),
-    startIndex: i,
-    items: fields.slice(i, i + batchSize)
-  })
-}
+# 读取提取的字段数据
+with open('/tmp/insurance_fields.json', 'r', encoding='utf-8') as f:
+    fields = json.load(f)
 
-log(`正在处理 ${fields.length} 个字段，分为 ${batches.length} 个批次`)
+batch_size = 100
+num_batches = math.ceil(len(fields) / batch_size)
 
-// 使用pipeline并行翻译每个批次
-const results = await pipeline(
-  batches,
-  batch => agent(
-    `请将以下中文保险/寿险字段名翻译成英文字段名。
-
-重要标准：
-- 遵循ACORD（Association for Cooperative Operations Research and Development）命名规范
-- 遵循中国保险行业标准字段命名规范
-- 使用snake_case命名格式（例如：policy_number, insured_name）
-- 与常见保险术语保持一致
-- 对于不确定的翻译，在英文名前加"UNCERTAIN_"前缀
-
-待翻译的中文字段名：
-${batch.items.map((item, idx) => `${idx + 1}. ${item.chinese}`).join('\n')}
-
-请返回一个JSON数组，包含翻译结果。每项应包含：
-- original_index: Excel文件中的原始行索引
-- chinese_name: 原始中文字段名
-- english_name: 翻译后的英文字段名
-- confidence: "high", "medium", 或 "low"
-- note: 任何额外的上下文或解释（可选）
-
-如果对翻译不确定，请将confidence设为"low"或"medium"，并在english_name前加"UNCERTAIN_"前缀。`,
-    {
-      label: `批次-${batch.batchId}`,
-      phase: '翻译',
-      schema: {
-        type: 'object',
-        properties: {
-          translations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                original_index: { type: 'number' },
-                chinese_name: { type: 'string' },
-                english_name: { type: 'string' },
-                confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
-                note: { type: 'string' }
-              },
-              required: ['original_index', 'chinese_name', 'english_name', 'confidence']
-            }
-          }
-        },
-        required: ['translations']
-      }
+batches = []
+for i in range(num_batches):
+    start_idx = i * batch_size
+    end_idx = min((i + 1) * batch_size, len(fields))
+    batch = {
+        'batch_id': i,
+        'items': fields[start_idx:end_idx]
     }
-  )
-)
+    batches.append(batch)
 
-// 展平结果
-const allTranslations = results.filter(Boolean).flatMap(r => r.translations)
-
-return { translations: allTranslations, totalProcessed: allTranslations.length }
+print(f"共 {len(fields)} 个字段，分为 {num_batches} 个批次")
 ```
 
-使用Workflow工具调用此脚本，将提取的字段数据作为args传入。
+#### 3.2 为每个批次创建输入文件
 
-### 第4步：写入输出Excel
+为每个批次创建一个输入JSON文件，保存到临时目录：
 
-workflow完成后，会返回包含所有翻译结果的对象：
-```javascript
-{
-  translations: [
-    {
-      original_index: 0,
-      chinese_name: "投保人姓名",
-      english_name: "policyholder_name",
-      confidence: "high",
-      note: ""
-    },
+```python
+import os
+
+batch_dir = '/tmp/insurance_translation_batches'
+os.makedirs(batch_dir, exist_ok=True)
+
+for batch in batches:
+    batch_file = f"{batch_dir}/batch_{batch['batch_id']}.json"
+    with open(batch_file, 'w', encoding='utf-8') as f:
+        json.dump(batch, f, ensure_ascii=False, indent=2)
+    print(f"已创建批次文件: {batch_file}")
+```
+
+#### 3.3 派遣子agent翻译
+
+读取`agents/translator.md`文件，获取子agent的提示词模板。
+
+对每个批次，使用Agent工具派遣一个子agent：
+
+```python
+# 伪代码示例（实际使用Agent工具）
+for batch in batches:
+    batch_file = f"{batch_dir}/batch_{batch['batch_id']}.json"
+    output_file = f"{batch_dir}/result_{batch['batch_id']}.json"
+    
+    # 构建子agent的prompt
+    prompt = f"""
+你是一个保险行业字段翻译专家。
+
+请阅读以下批次文件：{batch_file}
+
+按照agents/translator.md中的指导，将这批中文字段名翻译成英文字段名。
+
+将翻译结果保存到：{output_file}
+
+结果格式应为JSON对象：
+{{
+  "batch_id": <批次ID>,
+  "translations": [
+    {{
+      "original_index": <原始索引>,
+      "chinese_name": "<中文字段名>",
+      "english_name": "<英文字段名>",
+      "confidence": "high|medium|low",
+      "note": "<可选的备注>"
+    }},
     ...
-  ],
-  totalProcessed: 10000
-}
+  ]
+}}
+"""
+    
+    # 使用Agent工具派遣子agent
+    Agent(
+        description=f"翻译批次{batch['batch_id']}",
+        prompt=prompt,
+        run_in_background=True  # 后台运行，实现并行
+    )
 ```
+
+**关键点**：
+- 使用`run_in_background=True`让所有子agent并行运行
+- 每个子agent读取agents/translator.md获取详细的翻译指导
+- 每个子agent将结果保存到独立的JSON文件
+
+#### 3.4 等待所有子agent完成
+
+所有子agent会在后台运行。你会收到`<task-notification>`通知每个子agent完成。
+
+等待所有子agent完成后，继续下一步。
+
+### 第4步：汇总翻译结果
+
+所有子agent完成后，读取所有结果文件并汇总：
+
+```python
+import glob
+
+# 读取所有结果文件
+result_files = sorted(glob.glob(f"{batch_dir}/result_*.json"))
+
+all_translations = []
+for result_file in result_files:
+    with open(result_file, 'r', encoding='utf-8') as f:
+        result = json.load(f)
+        all_translations.extend(result['translations'])
+
+# 按original_index排序
+all_translations.sort(key=lambda x: x['original_index'])
+
+# 保存汇总结果
+final_result = {
+    'translations': all_translations,
+    'totalProcessed': len(all_translations)
+}
+
+final_result_file = '/tmp/insurance_translations_final.json'
+with open(final_result_file, 'w', encoding='utf-8') as f:
+    json.dump(final_result, f, ensure_ascii=False, indent=2)
+
+print(f"汇总完成，共处理 {len(all_translations)} 个字段")
+print(f"结果已保存到: {final_result_file}")
+```
+
+### 第5步：写入输出Excel
 
 使用bundled的`scripts/write_output.py`脚本将结果写入Excel：
 
 ```bash
-python scripts/write_output.py <翻译结果json路径> <输出excel路径>
+python scripts/write_output.py /tmp/insurance_translations_final.json <输出excel路径>
 ```
 
 此脚本会：
 - 读取翻译结果JSON
-- 创建包含"字段中文名"和"字段英文名"两列的Excel
-- 对于confidence为"low"或english_name包含"UNCERTAIN_"的字段，在备注列标记
+- 创建包含"字段中文名"、"字段英文名"、"置信度"、"备注"四列的Excel
+- 对于confidence为"low"或english_name包含"UNCERTAIN_"的字段，在备注列标记"⚠️ 需要人工审核"
+- 对于confidence为"medium"的字段，在备注列标记"建议复核"
 - 按original_index排序，保持原始顺序
 
-### 第5步：总结报告
+### 第6步：总结报告
 
 向用户报告：
 - 总共处理的字段数量
@@ -179,10 +215,11 @@ python scripts/write_output.py <翻译结果json路径> <输出excel路径>
 
 ## 注意事项
 
-1. **Workflow调用**：此skill依赖Workflow工具来并行处理大量数据。确保用户理解这会派遣多个子agent。
+1. **并行处理**：使用Agent工具的`run_in_background=True`参数实现并行处理。所有子agent会同时运行。
 2. **批次大小**：默认100条/批次。如果用户的数据量特别大（>5万条），可以考虑增加批次大小到200-500。
-3. **错误处理**：如果某个批次的子agent失败，pipeline会将该批次结果设为null。最终汇总时会过滤掉null值。
-4. **中间文件**：提取的JSON和翻译结果JSON都保存在临时目录，便于调试和恢复。
+3. **错误处理**：如果某个子agent失败，检查其输出文件是否存在。可以重新派遣该批次的翻译任务。
+4. **中间文件**：所有中间文件（批次输入、批次结果、最终汇总）都保存在`/tmp/insurance_translation_batches/`目录，便于调试和恢复。
+5. **子agent提示词**：详细的翻译指导保存在`agents/translator.md`，子agent会读取该文件获取指导。
 
 ## Bundled资源
 
@@ -193,4 +230,8 @@ python scripts/write_output.py <翻译结果json路径> <输出excel路径>
 ### scripts/write_output.py
 
 将翻译结果JSON写入Excel文件，包含中英文字段名和置信度标记。
+
+### agents/translator.md
+
+子agent的详细提示词，包含翻译标准、命名规范、示例等。
 
